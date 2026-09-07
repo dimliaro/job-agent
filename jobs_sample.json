@@ -1,0 +1,26 @@
+[
+  {
+    "id": "job-001",
+    "title": "Junior Data Analyst",
+    "company": "Acme Analytics",
+    "location": "Athens, Greece (Hybrid)",
+    "url": "https://example.com/jobs/junior-data-analyst",
+    "description": "We are looking for a Junior Data Analyst to join our team. You will build dashboards, write SQL queries against our warehouse, and clean data with Python/Pandas. Requirements: BSc in a quantitative field, SQL, Python, basic statistics. Nice to have: experience with ETL and data visualization tools."
+  },
+  {
+    "id": "job-002",
+    "title": "Senior Frontend Engineer (React)",
+    "company": "Pixel Corp",
+    "location": "Remote",
+    "url": "https://example.com/jobs/senior-frontend",
+    "description": "5+ years of React, TypeScript, and modern CSS. Lead a team of frontend engineers and own the design system. Not a junior role."
+  },
+  {
+    "id": "job-003",
+    "title": "Data Engineer (Entry Level)",
+    "company": "DataFlow",
+    "location": "Athens, Greece",
+    "url": "https://example.com/jobs/data-engineer-entry",
+    "description": "Entry-level Data Engineer. Build and maintain ETL pipelines in Python, work with SQL databases, containerize services with Docker. We value candidates with a portfolio of personal data projects. Fresh graduates welcome."
+  }
+]
