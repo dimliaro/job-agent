@@ -12,11 +12,13 @@ deliberate: get the pieces working first, add the agentic loop later):
 """
 
 import os
+from datetime import date
 import config
 import sources
 import llm
 import notify
 import export
+import store
 
 
 def load_master_cv() -> str:
@@ -30,6 +32,8 @@ def slug(text: str) -> str:
 
 def main() -> None:
     os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+    store.init_db()
+    today = date.today().isoformat()
     master_cv = load_master_cv()
 
     jobs = sources.get_jobs()
@@ -39,13 +43,16 @@ def main() -> None:
         notify.send_digest("No jobs returned from the source today.")
         return
 
-    # Score everything.
+    # Score everything, and remember each job in the database.
     scored = []
     for job in jobs:
         result = llm.score_job(job, config.PROFILE)
         job["_score"] = result.get("score", 0)
         job["_reasons"] = result.get("reasons", "")
         print(f"  {job['_score']:>3}  {job['title']} @ {job['company']}")
+        store.upsert_job(
+            {**job, "score": job["_score"], "reasons": job["_reasons"]}, today
+        )
         scored.append(job)
 
     # Keep the good ones, best first.
@@ -66,6 +73,7 @@ def main() -> None:
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(cv)
         docx_path = export.markdown_cv_to_docx(cv, base + ".docx")
+        store.set_cv(job["id"], docx_path)
         lines.append(
             f"[{job['_score']}] {job['title']} @ {job['company']}\n"
             f"    {job['location']}\n"

@@ -1,4 +1,8 @@
 .env
+.venv/
 output/
 __pycache__/
 *.pyc
+jobs.db
+cron.log
+.DS_Store

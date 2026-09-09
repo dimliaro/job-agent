@@ -74,3 +74,4 @@ EMAIL_TO = os.getenv("EMAIL_TO", "")          # where to send the digest
 MASTER_CV_PATH = "master_cv.md"
 JOBS_INPUT_PATH = "jobs_sample.json"
 OUTPUT_DIR = "output"
+DB_PATH = "jobs.db"       # SQLite database powering the dashboard

@@ -40,6 +40,7 @@ flowchart LR
 - Optional email digest over SMTP
 - Offline mode for developing and testing without spending API quota
 - Configurable search queries, location, recency window, and score threshold
+- Interactive dashboard (Streamlit): browse by date/score, add notes, and track applications and their responses
 
 ## Project structure
 
@@ -51,6 +52,9 @@ job-agent/
 ├── llm.py             # Claude calls: score_job, tailor_cv
 ├── export.py          # markdown CV -> .docx
 ├── notify.py          # email digest (SMTP)
+├── store.py           # SQLite persistence (jobs + your annotations)
+├── dashboard.py       # Streamlit dashboard UI
+├── dashboard.command  # macOS double-click launcher for the dashboard
 ├── master_cv.md       # your master CV (source of truth for tailoring)
 ├── jobs_sample.json   # sample jobs for offline testing
 ├── debug_jsearch.py   # one-off API response inspector
@@ -95,6 +99,16 @@ python agent.py
 Tailored CVs land in `output/` and the digest is emailed (or printed if email isn't configured).
 
 **Test without spending API quota** — set `SOURCE = "file"` in `config.py` to run the full pipeline against `jobs_sample.json`.
+
+## Dashboard
+
+The agent stores every scored job in a local SQLite database (`jobs.db`). Launch the dashboard to browse and manage them:
+
+```bash
+streamlit run dashboard.py
+```
+
+On macOS you can instead double-click `dashboard.command` (run `chmod +x dashboard.command` once first). It opens in your browser and lets you filter jobs by run date and score, add notes, tick which jobs you applied to, and track each application's response (waiting / positive / negative). Your edits are saved back to the database and survive agent re-runs.
 
 ## Configuration
 
