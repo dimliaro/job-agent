@@ -1,0 +1,34 @@
+name: Daily job hunt
+
+on:
+  schedule:
+    # GitHub cron is in UTC. 07:00 UTC = 10:00 Athens during summer (EEST, UTC+3).
+    # When Greek clocks go back (late October), change this to '0 8 * * *'.
+    - cron: '0 7 * * *'
+  workflow_dispatch:        # lets you run it by hand from the Actions tab
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          SMTP_HOST: smtp.gmail.com
+          SMTP_PORT: '465'
+        run: python agent.py
