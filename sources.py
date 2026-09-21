@@ -16,6 +16,7 @@ Every source returns a list of dicts with the same shape:
 """
 
 import json
+import time
 from typing import List, Dict
 
 import requests
@@ -23,6 +24,8 @@ import requests
 import config
 
 JSEARCH_URL = "https://jsearch.p.rapidapi.com/search-v2"
+JSEARCH_TIMEOUT = 45     # seconds to wait for a response
+JSEARCH_RETRIES = 3      # attempts before giving up on a query
 
 
 def load_jobs(path: str) -> List[Dict]:
@@ -96,7 +99,21 @@ def fetch_from_jsearch(query: str) -> List[Dict]:
         "date_posted": config.SEARCH_DATE_POSTED,
         "num_pages": str(config.SEARCH_PAGES),
     }
-    resp = requests.get(JSEARCH_URL, headers=headers, params=params, timeout=30)
+
+    # Retry on slow/flaky responses: a single timeout shouldn't lose the query.
+    resp = None
+    for attempt in range(1, JSEARCH_RETRIES + 1):
+        try:
+            resp = requests.get(JSEARCH_URL, headers=headers, params=params,
+                                timeout=JSEARCH_TIMEOUT)
+            break
+        except requests.exceptions.RequestException as e:
+            if attempt == JSEARCH_RETRIES:
+                raise
+            wait = 2 ** attempt   # 2s, 4s, ...
+            print(f"    JSearch attempt {attempt} failed ({e.__class__.__name__}); "
+                  f"retrying in {wait}s…")
+            time.sleep(wait)
 
     if resp.status_code in (401, 403):
         raise RuntimeError(
@@ -119,11 +136,21 @@ def get_jobs() -> List[Dict]:
 
     if config.SOURCE == "jsearch":
         seen, jobs = set(), []
+        failures = 0
         for query in config.SEARCH_QUERIES:          # one API call per query
-            for job in fetch_from_jsearch(query):
+            try:
+                results = fetch_from_jsearch(query)
+            except requests.exceptions.RequestException as e:
+                failures += 1
+                print(f"  ! query failed after retries, skipping: {query!r} ({e.__class__.__name__})")
+                continue
+            for job in results:
                 if job["id"] and job["id"] not in seen:
                     seen.add(job["id"])
                     jobs.append(job)
+        # Only give up entirely if every query failed (network/API down).
+        if failures == len(config.SEARCH_QUERIES) and failures > 0:
+            raise RuntimeError("All JSearch queries failed — the API or network looks down right now.")
         return jobs
 
     raise ValueError(f"Unknown SOURCE: {config.SOURCE!r} (use 'jsearch' or 'file').")
