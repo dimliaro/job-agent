@@ -11,6 +11,7 @@ deliberate: get the pieces working first, add the agentic loop later):
   5. email (or print) a digest
 """
 
+import hashlib
 import os
 from datetime import date
 import config
@@ -68,7 +69,9 @@ def main() -> None:
     lines = ["Top matches:\n"]
     for job in kept:
         cv = llm.tailor_cv(master_cv, job)
-        base = os.path.join(config.OUTPUT_DIR, f"cv-{slug(job['company'])}-{job['id']}")
+        # search-v2 job ids are hundreds of chars long — hash them to keep filenames short.
+        short_id = hashlib.sha1(job["id"].encode()).hexdigest()[:10]
+        base = os.path.join(config.OUTPUT_DIR, f"cv-{slug(job['company'])[:40]}-{short_id}")
         md_path = base + ".md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(cv)
