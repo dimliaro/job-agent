@@ -33,7 +33,7 @@ SEARCH_QUERIES = [
     "qa automation engineer in Athens, Greece",
 ]
 SEARCH_COUNTRY = "gr"           # ISO country code
-SEARCH_DATE_POSTED = "month"    # all | today | 3days | week | month  (week is often empty for GR)
+SEARCH_DATE_POSTED = "all"      # all | today | 3days | week | month — GR jobs have no post date in JSearch, so any filter returns 0
 SEARCH_PAGES = 1                # 1 page ≈ up to 10 jobs per query
 
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
