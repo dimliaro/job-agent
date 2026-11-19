@@ -32,6 +32,7 @@ def init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS jobs (
                 id          TEXT PRIMARY KEY,
+                track       TEXT,                       -- data | it (config.TRACKS)
                 first_seen  TEXT,
                 last_seen   TEXT,
                 run_date    TEXT,
@@ -48,28 +49,32 @@ def init_db() -> None:
             )
             """
         )
+        # Databases created before tracks existed: add the column, mark old rows 'data'.
+        cols = [r["name"] for r in con.execute("PRAGMA table_info(jobs)")]
+        if "track" not in cols:
+            con.execute("ALTER TABLE jobs ADD COLUMN track TEXT DEFAULT 'data'")
 
 
 def upsert_job(job: dict, run_date: str) -> None:
     """Insert a newly seen job, or refresh the machine fields of an existing one.
-    `job` needs: id, title, company, location, url, score, reasons."""
+    `job` needs: id, track, title, company, location, url, score, reasons."""
     with _conn() as con:
         exists = con.execute("SELECT 1 FROM jobs WHERE id = ?", (job["id"],)).fetchone()
         if exists:
             con.execute(
-                """UPDATE jobs SET last_seen=?, run_date=?, title=?, company=?,
+                """UPDATE jobs SET last_seen=?, run_date=?, track=?, title=?, company=?,
                        location=?, url=?, score=?, reasons=?
                    WHERE id=?""",
-                (run_date, run_date, job["title"], job["company"], job["location"],
+                (run_date, run_date, job["track"], job["title"], job["company"], job["location"],
                  job["url"], job["score"], job["reasons"], job["id"]),
             )
         else:
             con.execute(
                 """INSERT INTO jobs
-                       (id, first_seen, last_seen, run_date, title, company,
+                       (id, track, first_seen, last_seen, run_date, title, company,
                         location, url, score, reasons)
-                   VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                (job["id"], run_date, run_date, run_date, job["title"], job["company"],
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (job["id"], job["track"], run_date, run_date, run_date, job["title"], job["company"],
                  job["location"], job["url"], job["score"], job["reasons"]),
             )
 

@@ -2,13 +2,14 @@
 The orchestrator. Run:  python agent.py
 
 Pipeline (v1 is a linear pipeline, not a full tool-calling agent — that's
-deliberate: get the pieces working first, add the agentic loop later):
+deliberate: get the pieces working first, add the agentic loop later).
+Runs once per track in config.TRACKS (e.g. data roles, IT support roles):
 
-  1. load jobs
-  2. score each against the profile
+  1. load jobs for the track's queries
+  2. score each against the track's profile
   3. keep the ones above MIN_SCORE, take the top N
-  4. tailor the CV for each kept job -> output/
-  5. email (or print) a digest
+  4. tailor the track's master CV for each kept job -> output/
+  5. email (or print) one digest with a section per track
 """
 
 import hashlib
@@ -22,8 +23,8 @@ import export
 import store
 
 
-def load_master_cv() -> str:
-    with open(config.MASTER_CV_PATH, "r", encoding="utf-8") as f:
+def load_master_cv(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
 
@@ -31,28 +32,29 @@ def slug(text: str) -> str:
     return "".join(c if c.isalnum() else "-" for c in text.lower()).strip("-")
 
 
-def main() -> None:
-    os.makedirs(config.OUTPUT_DIR, exist_ok=True)
-    store.init_db()
-    today = date.today().isoformat()
-    master_cv = load_master_cv()
+def run_track(track: dict, today: str, seen: set) -> list:
+    """Fetch, score and tailor for one track. Returns its digest lines."""
+    header = f"=== {track['label']} ===\n"
+    master_cv = load_master_cv(track["cv_path"])
 
-    jobs = sources.get_jobs()
-    print(f"Loaded {len(jobs)} jobs (source: {config.SOURCE}).")
+    # A job found by an earlier track this run is already scored — skip it here.
+    jobs = [j for j in sources.get_jobs(track["queries"]) if j["id"] not in seen]
+    seen.update(j["id"] for j in jobs)
+    print(f"[{track['name']}] Loaded {len(jobs)} jobs (source: {config.SOURCE}).")
 
     if not jobs:
-        notify.send_digest("No jobs returned from the source today.")
-        return
+        return [header, "No jobs returned from the source today.\n"]
 
     # Score everything, and remember each job in the database.
     scored = []
     for job in jobs:
-        result = llm.score_job(job, config.PROFILE)
+        result = llm.score_job(job, track["profile"])
         job["_score"] = result.get("score", 0)
         job["_reasons"] = result.get("reasons", "")
         print(f"  {job['_score']:>3}  {job['title']} @ {job['company']}")
         store.upsert_job(
-            {**job, "score": job["_score"], "reasons": job["_reasons"]}, today
+            {**job, "track": track["name"], "score": job["_score"],
+             "reasons": job["_reasons"]}, today
         )
         scored.append(job)
 
@@ -62,16 +64,16 @@ def main() -> None:
     kept = kept[: config.TOP_N]
 
     if not kept:
-        notify.send_digest("No jobs cleared the score threshold today.")
-        return
+        return [header, "No jobs cleared the score threshold today.\n"]
 
     # Tailor a CV for each kept job.
-    lines = ["Top matches:\n"]
+    lines = [header]
     for job in kept:
         cv = llm.tailor_cv(master_cv, job)
         # search-v2 job ids are hundreds of chars long — hash them to keep filenames short.
         short_id = hashlib.sha1(job["id"].encode()).hexdigest()[:10]
-        base = os.path.join(config.OUTPUT_DIR, f"cv-{slug(job['company'])[:40]}-{short_id}")
+        base = os.path.join(config.OUTPUT_DIR,
+                            f"cv-{track['name']}-{slug(job['company'])[:40]}-{short_id}")
         md_path = base + ".md"
         with open(md_path, "w", encoding="utf-8") as f:
             f.write(cv)
@@ -84,6 +86,19 @@ def main() -> None:
             f"    why: {job['_reasons']}\n"
             f"    tailored CV: {docx_path}  (also {md_path})\n"
         )
+    return lines
+
+
+def main() -> None:
+    os.makedirs(config.OUTPUT_DIR, exist_ok=True)
+    store.init_db()
+    today = date.today().isoformat()
+
+    # One digest, one section per track.
+    seen = set()
+    lines = ["Top matches:\n"]
+    for track in config.TRACKS:
+        lines += run_track(track, today, seen)
 
     notify.send_digest("\n".join(lines))
 

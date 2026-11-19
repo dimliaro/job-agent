@@ -55,7 +55,8 @@ job-agent/
 ├── store.py           # SQLite persistence (jobs + your annotations)
 ├── dashboard.py       # Streamlit dashboard UI
 ├── dashboard.command  # macOS double-click launcher for the dashboard
-├── master_cv.md       # your master CV (source of truth for tailoring)
+├── master_cv.md       # master CV for the data track (source of truth for tailoring)
+├── master_cv_it.md    # master CV for the IT support track
 ├── jobs_sample.json   # sample jobs for offline testing
 ├── debug_jsearch.py   # one-off API response inspector
 ├── requirements.txt
@@ -88,7 +89,7 @@ Fill in `.env`:
 | `RAPIDAPI_KEY` | for live search | RapidAPI key, subscribed to the JSearch API (free Basic plan) |
 | `EMAIL_USER` / `EMAIL_PASS` / `EMAIL_TO` | optional | Gmail sender / App Password / recipient for the digest |
 
-Then edit `master_cv.md` with your real experience, and adjust `PROFILE` and `SEARCH_QUERIES` in `config.py`.
+Then edit `master_cv.md` / `master_cv_it.md` with your real experience, and adjust the profiles and queries in `TRACKS` in `config.py`.
 
 ## Usage
 
@@ -108,17 +109,16 @@ The agent stores every scored job in a local SQLite database (`jobs.db`). Launch
 streamlit run dashboard.py
 ```
 
-On macOS you can instead double-click `dashboard.command` (run `chmod +x dashboard.command` once first). It opens in your browser and lets you filter jobs by run date and score, add notes, tick which jobs you applied to, and track each application's response (waiting / positive / negative). Your edits are saved back to the database and survive agent re-runs.
+On macOS you can instead double-click `dashboard.command` (run `chmod +x dashboard.command` once first). It opens in your browser and lets you filter jobs by run date, track and score, add notes, tick which jobs you applied to, and track each application's response (waiting / positive / negative). Your edits are saved back to the database and survive agent re-runs.
 
 ## Configuration
 
 Everything lives in `config.py`:
 
 - `SOURCE` — `"jsearch"` (live) or `"file"` (offline)
-- `SEARCH_QUERIES` — list of role searches (one API call each)
+- `TRACKS` — the job families to search (e.g. data roles, IT support). Each has its own `queries` (one API call each), `profile` (what jobs are scored against) and master CV (`cv_path`), and gets its own section in the digest
 - `SEARCH_COUNTRY` / `SEARCH_DATE_POSTED` — market and recency window
-- `MIN_SCORE` / `TOP_N` — filtering thresholds
-- `PROFILE` — the description each job is scored against
+- `MIN_SCORE` / `TOP_N` — filtering thresholds, applied per track
 - `MODEL` — the Claude model to use
 
 ## Example run

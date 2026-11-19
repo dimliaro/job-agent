@@ -129,15 +129,16 @@ def fetch_from_jsearch(query: str) -> List[Dict]:
     return [mapped for item in jobs if (mapped := _map_jsearch(item))]
 
 
-def get_jobs() -> List[Dict]:
-    """Dispatcher: pull jobs from whichever source config.SOURCE selects."""
+def get_jobs(queries: List[str]) -> List[Dict]:
+    """Dispatcher: pull jobs for these queries from whichever source config.SOURCE selects.
+    (The "file" source ignores the queries and returns the whole sample file.)"""
     if config.SOURCE == "file":
         return load_jobs(config.JOBS_INPUT_PATH)
 
     if config.SOURCE == "jsearch":
         seen, jobs = set(), []
         failures = 0
-        for query in config.SEARCH_QUERIES:          # one API call per query
+        for query in queries:                       # one API call per query
             try:
                 results = fetch_from_jsearch(query)
             except requests.exceptions.RequestException as e:
@@ -149,7 +150,7 @@ def get_jobs() -> List[Dict]:
                     seen.add(job["id"])
                     jobs.append(job)
         # Only give up entirely if every query failed (network/API down).
-        if failures == len(config.SEARCH_QUERIES) and failures > 0:
+        if failures == len(queries) and failures > 0:
             raise RuntimeError("All JSearch queries failed — the API or network looks down right now.")
         return jobs
 

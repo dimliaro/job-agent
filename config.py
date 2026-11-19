@@ -19,31 +19,24 @@ MODEL = "claude-sonnet-5"
 # "file"    = offline, read jobs_sample.json (test logic without spending quota)
 SOURCE = "jsearch"
 
-# What to search for. One API call per query (free tier = 200 calls/month).
-# 6 queries once a day ≈ 180/month — near the cap, so run daily at most, or
-# trim the list / run every few days if you want headroom.
-# Note: no "junior" here on purpose — the scorer filters seniority, so a wider
-# net catches more and the model drops the senior roles itself.
-SEARCH_QUERIES = [
-    "data analyst in Athens, Greece",
-    "data engineer in Athens, Greece",
-    "business intelligence analyst in Athens, Greece",
-    "analytics engineer in Athens, Greece",
-    "python developer in Athens, Greece",
-    "qa automation engineer in Athens, Greece",
-]
+# What to search for lives in TRACKS below (one query list per track).
+# One API call per query (free tier = 200 calls/month). 6 queries in total once
+# a day ≈ 180/month — near the cap, so keep the total across tracks at ~6, or
+# run every few days if you want more queries.
+# Note: no "junior" in the queries on purpose — the scorer filters seniority, so
+# a wider net catches more and the model drops the senior roles itself.
 SEARCH_COUNTRY = "gr"           # ISO country code
 SEARCH_DATE_POSTED = "all"      # all | today | 3days | week | month — GR jobs have no post date in JSearch, so any filter returns 0
 SEARCH_PAGES = 1                # 1 page ≈ up to 10 jobs per query
 
 RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
 
-# --- Scoring thresholds ---
-TOP_N = 3          # how many jobs to report each run
+# --- Scoring thresholds (applied per track) ---
+TOP_N = 3          # how many jobs to report per track each run
 MIN_SCORE = 60     # ignore jobs scoring below this (0-100)
 
-# --- Your profile: this is what each job is scored against. Edit freely. ---
-PROFILE = """
+# --- Your profiles: each job is scored against its track's profile. Edit freely. ---
+PROFILE_DATA = """
 Entry-level / junior candidate for data roles, based in Athens (open to
 hybrid/remote). Computer Science graduate (AUEB).
 
@@ -63,6 +56,57 @@ football-data project).
 Not interested in: senior/lead roles, pure front-end roles, or unpaid internships.
 """
 
+PROFILE_IT = """
+Entry-level / junior candidate for IT support roles, based in Kifisia, Athens.
+Computer Science graduate (AUEB, 2025).
+
+Core strengths:
+- Hardware: PC assembly, upgrades (RAM, SSD/NVMe), cleaning/repasting,
+  component diagnosis; desktops, laptops, MacBooks, printers, peripherals
+- Windows installs/reinstalls, BIOS/UEFI, drivers; Active Directory (users,
+  password resets, security groups); basic Linux
+- Networking: routers, Wi-Fi troubleshooting, IP configuration on wired LANs,
+  Ethernet cabling
+- IT support during military service (Research & Informatics Corps): AD admin,
+  PC upgrades, IT asset inventory
+- 3 years customer-facing retail at an electronics store, assisting the
+  in-store technician; some Python/SQL scripting
+
+Good fits: Helpdesk / Service Desk, IT Support Technician, Desktop Support,
+Field / On-site Technician, PC / Hardware Technician, junior System or
+Network Administrator.
+
+Not interested in: senior/lead roles, pure sales roles, or unpaid internships.
+"""
+
+# --- Tracks: each one is searched, scored and reported separately. ---
+# Every track has its own queries, its own profile and its own master CV,
+# and gets its own section in the email digest.
+TRACKS = [
+    {
+        "name": "data",
+        "label": "Data roles",
+        "queries": [
+            "data analyst in Athens, Greece",
+            "data engineer in Athens, Greece",
+            "business intelligence analyst in Athens, Greece",
+        ],
+        "profile": PROFILE_DATA,
+        "cv_path": "master_cv.md",
+    },
+    {
+        "name": "it",
+        "label": "IT support roles",
+        "queries": [
+            "IT support in Athens, Greece",
+            "helpdesk technician in Athens, Greece",
+            "system administrator in Athens, Greece",
+        ],
+        "profile": PROFILE_IT,
+        "cv_path": "master_cv_it.md",
+    },
+]
+
 # --- Email (fill these in .env, not here) ---
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "465"))
@@ -71,7 +115,6 @@ EMAIL_PASS = os.getenv("EMAIL_PASS", "")      # Gmail: use an App Password
 EMAIL_TO = os.getenv("EMAIL_TO", "")          # where to send the digest
 
 # --- Paths ---
-MASTER_CV_PATH = "master_cv.md"
 JOBS_INPUT_PATH = "jobs_sample.json"
 OUTPUT_DIR = "output"
 DB_PATH = "jobs.db"       # SQLite database powering the dashboard

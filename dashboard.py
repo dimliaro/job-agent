@@ -30,12 +30,15 @@ if df.empty:
 st.sidebar.header("Filters")
 run_dates = sorted([d for d in df["run_date"].dropna().unique()], reverse=True)
 picked_date = st.sidebar.selectbox("Run date", ["All"] + list(run_dates))
+tracks = sorted(df["track"].dropna().unique())
+picked_track = st.sidebar.selectbox("Track", ["All"] + list(tracks))
 min_score = st.sidebar.slider("Minimum score", 0, 100, 0, step=5)
 query = st.sidebar.text_input("Search title / company").strip().lower()
 
 # Which columns the user can edit, and how they render.
 COLUMN_CONFIG = {
     "score": st.column_config.NumberColumn("Score", disabled=True, width="small"),
+    "track": st.column_config.TextColumn("Track", disabled=True, width="small"),
     "title": st.column_config.TextColumn("Title", disabled=True),
     "company": st.column_config.TextColumn("Company", disabled=True),
     "location": st.column_config.TextColumn("Location", disabled=True),
@@ -49,7 +52,7 @@ COLUMN_CONFIG = {
     ),
     "notes": st.column_config.TextColumn("Notes", width="large"),
 }
-SHOW_COLS = ["score", "title", "company", "location", "run_date", "url",
+SHOW_COLS = ["score", "track", "title", "company", "location", "run_date", "url",
              "reasons", "applied", "response", "notes", "cv_path", "id"]
 
 
@@ -72,6 +75,8 @@ with tab_all:
     view = df.copy()
     if picked_date != "All":
         view = view[view["run_date"] == picked_date]
+    if picked_track != "All":
+        view = view[view["track"] == picked_track]
     view = view[view["score"] >= min_score]
     if query:
         mask = (view["title"].str.lower().str.contains(query)
